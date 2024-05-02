@@ -1,2 +1,10 @@
 /*.md
 /.LICENSE.~undo-tree~
+*.org
+
+/todo.org
+
+/.todo.org
+.~undo-tree~
+/.todo.org
+.~undo-tree~
