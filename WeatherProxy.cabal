@@ -18,8 +18,16 @@ common warnings
 executable WeatherProxy
     import:           warnings
     main-is:          Main.hs
-    -- other-modules:
+    other-modules:    Weather
     -- other-extensions:
     build-depends:    base ^>=4.17.2.1
+                    , servant
+                    , servant-client
+                    , aeson
+                    , bytestring
+                    , http-client
+                    , text
+
+                    
     hs-source-dirs:   app
     default-language: GHC2021

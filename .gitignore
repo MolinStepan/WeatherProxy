@@ -1,10 +1,16 @@
 /*.md
 /.LICENSE.~undo-tree~
 *.org
+/todo.org
+/.todo.org
+.~undo-tree~
+/.todo.org
+.~undo-tree~
+/todo.org
 
 /todo.org
 
-/.todo.org
-.~undo-tree~
-/.todo.org
-.~undo-tree~
+*.org
+
+/..gitignore.~undo-tree~
+/app/.Weather.hs.~undo-tree~
