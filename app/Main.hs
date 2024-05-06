@@ -1,20 +1,56 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators     #-}
 
 module Main where
 
+import           Control.Concurrent
+import           Data.Aeson
 import           Data.Proxy
 import           Data.Text
+import           GHC.Generics
 import           Network.HTTP.Client (defaultManagerSettings, newManager)
 import           Servant.API
 import           Servant.Client
+import           System.Environment
 import           Weather
 
 -- http://api.openweathermap.org/geo/1.0/direct?q={City}&limit={num}&appid={API key}
--- https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}
+-- http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}
 
-apiKey = "d3893a4a4a6a642eadad642c112ed456" -- test api key hidden from git
+type APIKey = Text
+
+type RequestGetCityLocation =
+  "geo" :> "1.0" :> "direct"
+  :> QueryParam "q" Text    -- City
+  :> QueryParam "limit" Int -- Number of variants
+  :> QueryParam "appid" APIKey
+  :> Get '[JSON] Text
+
+type RequestWeatherLocation =
+  "data" :> "2.5" :> "weather"
+  :> QueryParam "lat" Double
+  :> QueryParam "lon" Double
+  :> QueryParam "appid" APIKey
+  :> Get '[JSON] Testing
+
+data Testing
+  = Testing
+      { timezone :: Int
+      , id       :: Int
+      , name     :: String
+      }
+  deriving (Eq, Generic, Show)
+instance FromJSON Testing
+
+data Location
+  = Location
+      { lat :: Float
+      , lon :: Float
+      }
+  deriving (Eq, Generic, Show)
+instance FromJSON Location
 
 second :: Int
 second = 1_000_000
@@ -27,32 +63,34 @@ hour = 3_600_000_000
 
 main :: IO ()
 main = do
+  apiKey <- getEnv "WEATHERAPIKEY"
+  -- inputList <- getArgs
+  [portS] <- getArgs
   manager' <- newManager defaultManagerSettings
   res <- runClientM
-    (cityRequest (Just "Moscow") (Just 1) (Just apiKey))
-    (mkClientEnv manager' (BaseUrl Http "api.openweathermap.org" 80 ""))
+    (weatherRequest (Just 55.75) (Just 37.61) (Just $ pack apiKey))
+    (mkClientEnv manager' (BaseUrl Http "api.openweathermap.org" (read portS) ""))
   case res of
     Left err    -> putStrLn $ "Error: " ++ show err
     Right books -> print books
 
-type APIKey = Text
-
-type RequestGetCityLocation =
-  "geo" :> "1.0" :> "direct"
-  :> QueryParam "q" Text    -- City
-  :> QueryParam "limit" Int -- Number of variants
-  :> QueryParam "appid" APIKey
-  :> Get '[JSON] Text
-
-reqApi :: Proxy RequestGetCityLocation
-reqApi = Proxy
+reqCityLocApi :: Proxy RequestGetCityLocation
+reqCityLocApi = Proxy
 
 cityRequest :: Maybe Text -> Maybe Int -> Maybe APIKey -> ClientM Text
-cityRequest = client reqApi
+cityRequest = client reqCityLocApi
 
-type RequestWeatherLocation =
-  "data" :> "2.5" :> "weather"
-  :> QueryParam "lat" Double
-  :> QueryParam "lon" Double
-  :> QueryParam "appid" APIKey
+
+reqApi :: Proxy RequestWeatherLocation
+reqApi = Proxy
+
+weatherRequest :: Maybe Double -> Maybe Double -> Maybe APIKey -> ClientM Testing
+weatherRequest = client reqApi
+
+weatherRequester :: MVar () -> [Location] -> Int -> IO ()
+weatherRequester cache locations time = do
+  -- request here
+  threadDelay time
+  weatherRequester cache locations time
+
 
