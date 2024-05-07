@@ -19,6 +19,8 @@ executable WeatherProxy
     import:           warnings
     main-is:          Main.hs
     other-modules:    Weather
+                    , Common
+                    , City
     -- other-extensions:
     build-depends:    base ^>=4.17.2.1
                     , servant
@@ -27,6 +29,7 @@ executable WeatherProxy
                     , bytestring
                     , http-client
                     , text
+                    , optparse-applicative
 
                     
     hs-source-dirs:   app
