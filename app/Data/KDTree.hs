@@ -1,49 +1,61 @@
 module Data.KDTree where
 
-data TwoDTree a b
+-- todo
+
+data TwoDTree a
   = Node2
-      { left  :: TwoDTree a b
-      , val   :: (a, b)
-      , right :: TwoDTree a b
+      { left  :: TwoDTree a
+      , val   :: (a, a)
+      , right :: TwoDTree a
       }
   | Leaf2
   deriving (Eq)
 
-findClosest :: forall a b dist.
-  (Ord a, Ord b, Ord dist) =>
-  TwoDTree a b ->
-  ((a,b)->(a,b)->dist) ->
-  (a,b) ->
-  Maybe (a,b)
-findClosest root metrics (lfa,lfb) = case root of
+findClosest :: forall a.
+  (Num a, Ord a) =>
+  TwoDTree a ->
+  (a,a) ->
+  Maybe (a,a)
+findClosest root (x,y) = case root of
   Leaf2       -> Nothing -- empty tree
-  Node2 _ v _ -> Just $ helpera root v
+  Node2 _ v _ -> Just $ helperX root v
   where
-    helpera :: TwoDTree a b -> (a,b) -> (a,b)
-    helpera node acc = case node of
-      Leaf2 -> acc
-      Node2 l (a,b) r -> let
+    helperX :: TwoDTree a -> (a,a) -> (a,a)
+    helperX node (ax,ay) = case node of
+      Leaf2 -> (ax,ay)
+      Node2 l (x',y') r -> let
         newClosest =
-          if metrics acc (lfa,lfb) > metrics (a,b) (lfa,lfb)
-          then (a,b)
-          else acc
-        nextNode = if a > lfa then l else r
-        closestPrecalculated = helpera nextNode newClosest
+          if (ax - x)^2 + (ay - y)^2 > (x' - x)^2 + (y' - y)^2
+          then (x',y')
+          else (ax,ay)
+
+        (nextNode,otherNode) = if ax > x then (r,l) else (l,r)
+
+        (cx,cy) = helperY nextNode newClosest
+
+        closest = if (ax - x)^2 > (cx - x)^2 + (cy - y)^2
+          then (cx,cy)
+          else branchX otherNode (cx,cy)
+
         in undefined
 
-    helperb :: TwoDTree a b -> (a,b) -> (a,b)
-    helperb node acc = case node of
-      Leaf2 -> acc
-      Node2 l (a,b) r -> let
-        newClosest =
-          if metrics acc (lfa,lfb) > metrics (a,b) (lfa,lfb)
-          then (a,b)
-          else acc
-        nextNode = if b > lfb then l else r
-        closestPrecalculated = helpera nextNode newClosest
-        in undefined
+    branchX :: TwoDTree a -> (a,a) -> (a,a)
+    branchX node closest = case node of
+      Leaf2             -> closest
+      Node2 l (x',y') r -> undefined
 
-addToTree :: (Ord a, Ord b) => TwoDTree a b -> (a, b) -> TwoDTree a b
+
+    branchY :: TwoDTree a -> (a,a) -> (a,a)
+    branchY = undefined
+
+    helperY :: TwoDTree a -> (a,a) -> (a,a)
+    helperY node (ax,ay) = undefined
+
+addToTree :: forall a b.
+  (Ord a, Num a) =>
+  TwoDTree a ->
+  (a,a) ->
+  TwoDTree a
 addToTree tree (va, vb) = undefined
 
 

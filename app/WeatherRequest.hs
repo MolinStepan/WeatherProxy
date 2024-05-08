@@ -5,7 +5,6 @@ module WeatherRequest where
 
 import           Common
 import           Data.Proxy
-import           Data.Text
 import           Data.Weather
 import           Network.HTTP.Client (Manager)
 import           Servant.API
@@ -24,11 +23,21 @@ reqApi = Proxy
 weatherRequest :: Maybe Float -> Maybe Float -> Maybe APIKey -> ClientM FullWeatherDescription
 weatherRequest = client reqApi
 
-getCurrentWeather :: Int -> Manager -> APIKey -> Location -> IO (Either Error' FullWeatherDescription)
-getCurrentWeather port manager key (Location lat lon) = do
+getCurrentWeatherEither :: Int -> Manager -> APIKey -> Location -> IO (Either Error' FullWeatherDescription)
+getCurrentWeatherEither port manager key (Location lat lon) = do
   res <- runClientM
     (weatherRequest (Just lat) (Just lon) (Just key))
     (mkClientEnv manager (BaseUrl Http "api.openweathermap.org" port ""))
   return $ case res of
     Right fwd -> Right fwd
     Left err  -> Left $ CE err
+
+
+getCurrentWeather :: Int -> Manager -> APIKey -> Location -> IO (Maybe FullWeatherDescription)
+getCurrentWeather port manager key (Location lat lon) = do
+  res <- runClientM
+    (weatherRequest (Just lat) (Just lon) (Just key))
+    (mkClientEnv manager (BaseUrl Http "api.openweathermap.org" port ""))
+  return $ case res of
+    Right fwd -> Just fwd
+    Left err  -> Nothing

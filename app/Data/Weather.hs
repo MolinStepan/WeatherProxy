@@ -47,7 +47,6 @@ instance FromJSON Weather where
     <*> v .: "description"
     <*> v .: "icon"
 
-
 data Wind
   = Wind
       { speed :: Float
@@ -80,7 +79,6 @@ instance FromJSON Main where
     <*> v .:? "sea_level"
     <*> v .:? "grnd_level"
 
-
 newtype Clouds
   = Clouds { all :: Int }
   deriving (Eq, Generic, Show)
@@ -88,11 +86,11 @@ instance FromJSON Clouds
 
 data MMs
   = MMs
-      { oneHour    :: Int
-      , threeHours :: Int
+      { oneHour    :: Maybe Float
+      , threeHours :: Maybe Float
       }
   deriving (Eq, Generic, Show)
 instance FromJSON MMs where
   parseJSON = withObject "MMs" $ \v -> MMs
-    <$> v .: "1h"
-    <*> v .: "3h"
+    <$> v .:? "1h"
+    <*> v .:? "3h"

@@ -32,7 +32,7 @@ executable WeatherProxy
                     , http-client
                     , text
                     , optparse-applicative
-                    , containers
+                    , time
 
                     
     hs-source-dirs:   app
