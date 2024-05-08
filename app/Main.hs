@@ -8,40 +8,37 @@ module Main where
 import           City
 import           Common
 import           Control.Concurrent
-import           Data.Proxy
-import           Data.Text
+import           Data.Either
+import qualified Data.Map            as M
+import qualified Data.Text           as T
+import           Data.Weather
 import           Network.HTTP.Client (defaultManagerSettings, newManager)
-import qualified Options.Applicative as Opt
-import           Servant.API
-import           Servant.Client
 import           System.Environment
+import           WeatherRequest
+-- import qualified Options.Applicative as Opt
 
 
 -- http://api.openweathermap.org/geo/1.0/direct?q={City}&limit={num}&appid={API key}
 -- http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}
 
-type RequestWeatherLocation =
-  "data" :> "2.5" :> "weather"
-  :> QueryParam "lat" Double
-  :> QueryParam "lon" Double
-  :> QueryParam "appid" APIKey
-  :> Get '[JSON] Text -- FIXME
+-- type Cache = MVar (M.Map Location (Vector FullWeatherDescription))
+
+infixl 0 |>
+(|>) :: a -> (a -> b) -> b
+a |> f = f a
 
 main :: IO ()
 main = do
-  apiKey <- getEnv "WEATHERAPIKEY"
+  apiKey <- T.pack <$> getEnv "WEATHERAPIKEY"
   -- inputList <- getArgs
-  cities <- getArgs
-  manager <- newManager defaultManagerSettings
-  inp <- traverse ((getCityLocation 80 manager (pack apiKey)) . pack) cities
-  putStrLn $ show inp
-
-
-reqApi :: Proxy RequestWeatherLocation
-reqApi = Proxy
-
-weatherRequest :: Maybe Double -> Maybe Double -> Maybe APIKey -> ClientM Text
-weatherRequest = client reqApi
+  cities <- (fmap . fmap) T.pack getArgs
+  apiManager <- newManager defaultManagerSettings
+  inp <- traverse (getCityLocation 80 apiManager apiKey) cities
+  let locs = inp
+        |> filter isRight
+        |> map (\(Right l) -> l)
+  cws <- traverse (getCurrentWeather 80 apiManager apiKey) locs
+  print cws
 
 weatherRequester :: MVar () -> [Location] -> Int -> IO ()
 weatherRequester cache locations time = do

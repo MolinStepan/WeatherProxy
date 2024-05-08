@@ -1,4 +1,4 @@
-module Common where
+module Common (Error' (..), APIKey, Location (..)) where
 
 import           Data.Aeson
 import           Data.Text
