@@ -12,20 +12,24 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
-common warnings
-    ghc-options: -Wall
+-- common warnings
+--     ghc-options:   -Wall, -O2, -threaded
 
 executable WeatherProxy
-    import:           warnings
+    ghc-options:   -O2 -Wall -threaded
     main-is:          Main.hs
     other-modules:    Data.Weather
-                    , Data.KDTree
-                    , Common
-                    , City
-                    , WeatherRequest
+                    -- , Data.KDTree
+                    , ArgumentsParser
+                    , Data.Common
+                    , OpenWeather.City
+                    , ServedApi
+                    , OpenWeather.WeatherRequest
     -- other-extensions:
     build-depends:    base ^>=4.17.2.1
                     , servant
+                    , servant-server
+                    , warp
                     , servant-client
                     , aeson
                     , bytestring

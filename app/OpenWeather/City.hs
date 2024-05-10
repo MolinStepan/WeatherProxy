@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module City where
+module OpenWeather.City where
 
-import           Common
+import           Data.Common
 import           Data.Proxy
 import           Data.Text
 import           Network.HTTP.Client (Manager)

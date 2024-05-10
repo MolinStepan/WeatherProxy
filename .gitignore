@@ -5,3 +5,4 @@ todo.org
 /*.md
 *.~undo-tree~
 /dist-newstyle/
+/setup.bash

@@ -5,87 +5,79 @@
 
 module Main where
 
-import           City
-import           Common
+import           Control.Applicative
 import           Control.Concurrent
-import           Data.Either
-import qualified Data.Text              as T
+import qualified Data.Text                  as T
 import           Data.Time.Clock.System
-import           Data.Weather
-import           Network.HTTP.Client    (Manager (..), defaultManagerSettings,
-                                         newManager)
-import qualified Options.Applicative    as Opt
+import           Data.Time.Format           (parseTimeM)
+import           Network.HTTP.Client        (Manager (..),
+                                             defaultManagerSettings, newManager)
+import           Network.Wai.Handler.Warp   (run)
+import qualified Options.Applicative        as Opt
 import           System.Environment
-import           WeatherRequest
+
+import           ArgumentsParser
+import           Data.Common
+import           Data.Weather
+import           OpenWeather.City
+import           OpenWeather.WeatherRequest
+import           ServedApi
 
 -- http://api.openweathermap.org/geo/1.0/direct?q={City}&limit={num}&appid={API key}
 -- http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}
 
-type Cache = (
-  [(Location, [Maybe FullWeatherDescription])]
-  , [UTCSeconds])
-
-infixl 0 |>
-(|>) :: a -> (a -> b) -> b
-a |> f = f a
-
-type UTCSeconds = Int
+inputPToLoc :: Int -> Manager -> APIKey -> InputPoint -> IO Location
+inputPToLoc port man key i = case i of
+  Loc loc -> return loc
+  City cit -> do
+    ans <- getCityLocation port man key cit
+    case ans of
+      Right loc -> return loc
+      Left err  -> error $ "error requesting " ++ T.unpack cit ++ ": " ++ show err
 
 main :: IO ()
 main = do
-  apiKey <- T.pack <$> getEnv "WEATHERAPIKEY"
-  timeBetweenRequests <- read <$> getEnv "WEATHERPROXYINTERVAL"
+  options <- readComLineArgs -- Moscow "(23.21,122.11)" Chelyabinsk
+
+  apiKey <- T.pack <$> getEnv "WEATHERPROXYAPIKEY"
+  apiPort <- read <$> getEnv "WEATHERPROXYOPENWEATHERPORT"
+  Just timeBetweenRequests <- readTime <$> getEnv "WEATHERPROXYINTERVAL"
   port <- read <$> getEnv "WEATHERPROXYPORT"
-  inputList <- getArgs
+  timeError' <- lookupEnv "WEATHERPROXYTIMEERROR"
+  let Just timeError = (readTime =<< timeError') <|> Just 900
+  locError' <- lookupEnv "WEATHERPROXYLOCATIONERROR"
+  let Just locError = (read <$> locError') <|> Just 0.001
+
   apiManager <- newManager defaultManagerSettings
   MkSystemTime utc _ <- getSystemTime
-  cache <- newMVar ([(Location 55 37, []), (Location 55 82, [])], [])
+  listOfLocs <- traverse (inputPToLoc apiPort apiManager apiKey) options
+  cache <- newMVar (map (, []) listOfLocs, [])
 
-  forkIO $ weatherRequester port apiManager apiKey cache (fromIntegral utc) timeBetweenRequests
+  serverId <- forkIO $ run port (app apiPort apiManager apiKey cache timeError locError)
 
-  threadDelay 240_000_000
+  requesterId <- forkIO $
+    weatherRequester
+      apiPort
+      apiManager
+      apiKey
+      cache
+      (fromIntegral utc)
+      timeBetweenRequests
+
+  cli
+
+  killThread serverId
+  killThread requesterId
 
   return ()
 
-weatherRequester :: Int -> Manager -> APIKey -> MVar Cache -> UTCSeconds -> UTCSeconds -> IO ()
-weatherRequester p m key cache time delay = do
-  -- request here
-  (oldCache, times) <- readMVar cache
-  retLoc <- newEmptyMVar
-  updateCache p m key (map fst oldCache) retLoc
 
-  newRecords <- takeMVar retLoc
-
-  traverse print (filter isLeft newRecords)
-  let newRecords' = map eToM newRecords
-
-  let !updatedCache =
-        ( zipWith (\(loc, weaths) weath -> (loc, weath : weaths)) oldCache newRecords'
-        , fromIntegral time : times
-        )
-  _ <- takeMVar cache
-  putMVar cache updatedCache
-
-  MkSystemTime currentTime _ <- getSystemTime
-  threadDelay $ (time + delay - fromIntegral currentTime) * 1_000_000
-  weatherRequester p m key cache (time + delay) delay
-  where
-    updateCache :: Int -> Manager -> APIKey -> [Location] -> MVar [Either Error' FullWeatherDescription] -> IO ()
-    updateCache p m key list putHere = case list of
-      [] -> do
-        putMVar putHere []
-      x : rest -> do
-        returnLoc <- newEmptyMVar
-        updateCache p m key rest returnLoc
-        res <- getCurrentWeatherEither p m key x
-        rest' <- takeMVar returnLoc
-        putMVar putHere (res : rest')
-
-
-    eToM e = case e of
-      Right x -> Just x
-      Left _  -> Nothing
-
-
-
-
+cli :: IO ()
+cli = do
+  inp <- getLine
+  case inp of
+    "stop" -> do
+      putStrLn "stopping"
+    _ -> do
+      putStrLn "unknown command"
+      cli

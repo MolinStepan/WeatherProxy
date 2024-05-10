@@ -2,8 +2,8 @@
 
 module Data.Weather where
 
-import           Common
 import           Data.Aeson
+import           Data.Common
 import           Data.Text
 import           GHC.Generics
 
@@ -31,6 +31,7 @@ instance FromJSON FullWeatherDescription where
     <*> v .: "clouds"
     <*> v .:? "rain"
     <*> v .:? "snow"
+instance ToJSON FullWeatherDescription
 
 data Weather
   = Weather
@@ -46,6 +47,7 @@ instance FromJSON Weather where
     <*> v .: "main"
     <*> v .: "description"
     <*> v .: "icon"
+instance ToJSON Weather
 
 data Wind
   = Wind
@@ -55,6 +57,7 @@ data Wind
       }
   deriving (Eq, Generic, Show)
 instance FromJSON Wind
+instance ToJSON Wind
 
 data Main
   = Main
@@ -78,11 +81,13 @@ instance FromJSON Main where
     <*> v .: "temp_max"
     <*> v .:? "sea_level"
     <*> v .:? "grnd_level"
+instance ToJSON Main
 
 newtype Clouds
   = Clouds { all :: Int }
   deriving (Eq, Generic, Show)
 instance FromJSON Clouds
+instance ToJSON Clouds
 
 data MMs
   = MMs
@@ -94,3 +99,4 @@ instance FromJSON MMs where
   parseJSON = withObject "MMs" $ \v -> MMs
     <$> v .:? "1h"
     <*> v .:? "3h"
+instance ToJSON MMs
